@@ -391,7 +391,7 @@ startAutoUpdate() {
 
         // حساب الأهداف والمخاطر
         // بعد حساب targets، أضف:
-const targetStatus = this.checkTargetStatus(data, targets, signalType);
+//const targetStatus = this.checkTargetStatus(data, targets, signalType);
 if (targetStatus.completed) {
     // إذا تم تحقيق الهدف، غير الإشارة
     signalType = 'hold';
