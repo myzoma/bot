@@ -618,3 +618,94 @@ body {
     background: linear-gradient(45deg, #ffb347, #f7931a);
 }
 
+/* إضافة أنماط نهائية للتحسينات */
+.enhanced-features {
+    margin-top: 30px;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(247, 147, 26, 0.1);
+    border-color: rgba(247, 147, 26, 0.3);
+}
+
+.feature-icon {
+    font-size: 2rem;
+    color: #f7931a;
+    margin-bottom: 15px;
+}
+
+.feature-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.feature-description {
+    color: #ccc;
+    line-height: 1.5;
+}
+
+/* تحسينات الأداء للرسوم المتحركة */
+.opportunity-card {
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* تحسينات إمكانية الوصول */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* تحسينات للطباعة */
+@media print {
+    .opportunities-container {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .opportunity-card {
+        border: 1px solid #ccc !important;
+        background: white !important;
+        color: black !important;
+        break-inside: avoid;
+    }
+    
+    .controls-section,
+    .export-container {
+        display: none !important;
+    }
+}
