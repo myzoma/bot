@@ -7,6 +7,7 @@ class CryptoTradingBot {
         this.currentFilter = 'all';
         this.marketData = new Map();
          this.isUpdating = false; // أضف هذا السطر
+          this.isLoading = false; // أضف هذا السطر
         this.init(); // نقل هذا السطر داخل الـ constructor
     }
 
@@ -206,7 +207,7 @@ updateRealTimeData() {
             this.updateUI();
         }
         this.isUpdating = false;
-    }, 1000); // تحديث كل ثانية فقط
+    }, 60000); // تحديث كل ثانية فقط
 }
 
   async getMarketData(symbols) {
@@ -347,7 +348,7 @@ startAutoUpdate() {
     
     this.updateInterval = setInterval(() => {
         this.fetchMarketData();
-    }, 60000);
+    }, 300000);
 }
 
     performTechnicalAnalysis(data, analysisType, riskLevel) {
@@ -668,31 +669,40 @@ startAutoUpdate() {
         this.lastUpdate = now;
     }
 
-    showLoading(show) {
-        const overlay = document.getElementById('loadingOverlay');
-        if (show) {
-            overlay.classList.add('active');
-        } else {
-            overlay.classList.remove('active');
-        }
-    }
-
-    async refreshData() {
-        if (!this.isConnected) {
-            await this.connectToAPI();
-            return;
-        }
-
+   async fetchMarketData() {
+    if (this.isLoading) return; // منع التحديث المتعدد
+    
+    try {
+        this.isLoading = true;
         this.showLoading(true);
         
-        try {
-            await this.fetchMarketData();
-        } catch (error) {
-            console.error('خطأ في تحديث البيانات:', error);
-        } finally {
-            this.showLoading(false);
-        }
+        const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
+        const data = await response.json();
+        
+        const symbols = this.getBinanceSymbols();
+        const filteredData = data.filter(item => symbols.includes(item.symbol));
+        
+        const marketData = filteredData.map(item => ({
+            symbol: item.symbol,
+            price: parseFloat(item.lastPrice),
+            change24h: parseFloat(item.priceChangePercent),
+            volume: parseFloat(item.volume),
+            high24h: parseFloat(item.highPrice),
+            low24h: parseFloat(item.lowPrice),
+            timestamp: Date.now()
+        }));
+        
+        await this.fetchTechnicalData(marketData);
+        this.opportunities = await this.analyzeOpportunities(marketData);
+        this.updateUI();
+        
+    } catch (error) {
+        console.error('خطأ في جلب البيانات:', error);
+    } finally {
+        this.isLoading = false;
+        this.showLoading(false);
     }
+}
 
     startAutoUpdate() {
         // تحديث البيانات كل 30 ثانية
@@ -700,7 +710,7 @@ startAutoUpdate() {
             if (this.isConnected) {
                 this.refreshData();
             }
-        }, 30000);
+        }, 60000);
     }
 
     stopAutoUpdate() {
