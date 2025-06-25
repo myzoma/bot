@@ -127,15 +127,6 @@ processBinanceData(data) {
     }
 }
 
-    // تخزين البيانات فقط، بدون تحديث فوري
-    this.marketData.set(data.s, marketData);
-    
-    // تحديث محدود
-    if (!this.lastWSUpdate || Date.now() - this.lastWSUpdate > 5000) {
-        this.lastWSUpdate = Date.now();
-        this.updateRealTimeData();
-    }
-}
 
    async fetchMarketData() {
     try {
