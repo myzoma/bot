@@ -953,21 +953,19 @@ class RealTimeCryptoBot extends CryptoTradingBot {
                 support: parseFloat(coin.lastPrice) * 0.95,
                 resistance: parseFloat(coin.lastPrice) * 1.05
             }));
-            
         } catch (error) {
             this.loadMockData();
         }
         
         super.start();
-    }
-}
+
         // تحديث كل 5 دقائق
         setTimeout(() => {
             console.log('🔄 تحديث الأسعار...');
             this.start();
         }, 300000);
-    } // ← قوس واحد فقط هنا
-} // ← قوس واحد فقط هنا
+    }
+}
     
     // إضافة معلومات الفلترة للواجهة
     displayFilterInfo() {
