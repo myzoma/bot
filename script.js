@@ -44,52 +44,160 @@ class CryptoTradingBot {
         });
     }
 
-    async connectToAPI() {
+  async connectToAPI() {
+    try {
+        this.showLoading(true);
+        
+        // الاتصال بـ Binance API
+        await this.connectToBinance();
+        
+        this.isConnected = true;
+        this.updateConnectionStatus();
+        await this.fetchMarketData();
+        
+    } catch (error) {
+        console.error('خطأ في الاتصال:', error);
+        this.isConnected = false;
+        this.updateConnectionStatus();
+    } finally {
+        this.showLoading(false);
+    }
+}
+async connectToBinance() {
+    try {
+        // اختبار الاتصال بالـ API
+        const response = await fetch('https://api.binance.com/api/v3/ping');
+        if (!response.ok) throw new Error('Binance connection failed');
+        
+        // إعداد WebSocket للبيانات المباشرة
+        this.setupBinanceWebSocket();
+        
+        console.log('تم الاتصال بـ Binance بنجاح');
+    } catch (error) {
+        console.error('خطأ في الاتصال بـ Binance:', error);
+        throw error;
+    }
+}
+    setupBinanceWebSocket() {
+    const symbols = this.getBinanceSymbols();
+    const streams = symbols.map(symbol => `${symbol.toLowerCase()}@ticker`).join('/');
+    
+    this.binanceWs = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
+    
+    this.binanceWs.onmessage = (event) => {
         try {
-            this.showLoading(true);
+            const data = JSON.parse(event.data);
+            if (data.data) {
+                this.processBinanceData(data.data);
+            }
+        } catch (error) {
+            console.error('خطأ في معالجة بيانات Binance:', error);
+        }
+    };
+
+    this.binanceWs.onerror = (error) => {
+        console.error('خطأ في WebSocket Binance:', error);
+    };
+
+    this.binanceWs.onclose = () => {
+        console.log('تم إغلاق اتصال Binance WebSocket');
+        setTimeout(() => this.setupBinanceWebSocket(), 5000); // إعادة الاتصال بعد 5 ثواني
+    };
+}
+    processBinanceData(data) {
+    const marketData = {
+        exchange: 'Binance',
+        symbol: data.s,
+        price: parseFloat(data.c),
+        change24h: parseFloat(data.P),
+        volume: parseFloat(data.v),
+        high24h: parseFloat(data.h),
+        low24h: parseFloat(data.l),
+        timestamp: Date.now()
+    };
+    
+    // تخزين البيانات أو تحديثها
+    this.marketData.set(`binance_${data.s}`, marketData);
+    this.updateRealTimeData();
+}
+   async fetchMarketData() {
+    try {
+        // جلب بيانات السوق من Binance API
+        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        const data = await response.json();
+        
+        const symbols = this.getBinanceSymbols();
+        const filteredData = data.filter(item => symbols.includes(item.symbol));
+        
+        // معالجة البيانات
+        const marketData = filteredData.map(item => ({
+            symbol: item.symbol,
+            price: parseFloat(item.lastPrice),
+            change24h: parseFloat(item.priceChangePercent),
+            volume: parseFloat(item.volume),
+            high24h: parseFloat(item.highPrice),
+            low24h: parseFloat(item.lowPrice),
+            timestamp: Date.now()
+        }));
+        
+        // جلب البيانات التقنية
+        await this.fetchTechnicalData(marketData);
+        
+        this.opportunities = await this.analyzeOpportunities(marketData);
+        this.updateUI();
+        
+    } catch (error) {
+        console.error('خطأ في جلب البيانات:', error);
+    }
+}
+async fetchTechnicalData(marketData) {
+    for (const item of marketData) {
+        try {
+            // جلب بيانات الشموع للساعة الأخيرة
+            const klinesResponse = await fetch(
+                `https://api.binance.com/api/v3/klines?symbol=${item.symbol}&interval=1h&limit=100`
+            );
+            const klines = await klinesResponse.json();
             
-            // محاكاة الاتصال بـ API
-            await this.delay(2000);
+            if (klines && klines.length > 0) {
+                const closes = klines.map(k => parseFloat(k[4]));
+                const highs = klines.map(k => parseFloat(k[2]));
+                const lows = klines.map(k => parseFloat(k[3]));
+                const volumes = klines.map(k => parseFloat(k[5]));
+                
+                // حساب المؤشرات الفنية
+                item.rsi = this.calculateRSI(closes);
+                item.macd = this.calculateMACD(closes).macd;
+                item.bb_position = this.calculateBollingerPosition(closes);
+                item.volume_ratio = this.calculateVolumeRatio(volumes);
+                item.support = Math.min(...lows.slice(-20));
+                item.resistance = Math.max(...highs.slice(-20));
+            }
             
-            this.isConnected = true;
-            this.updateConnectionStatus();
-            await this.fetchMarketData();
+            await this.delay(100); // تأخير لتجنب rate limits
             
         } catch (error) {
-            console.error('خطأ في الاتصال:', error);
-            this.isConnected = false;
-            this.updateConnectionStatus();
-        } finally {
-            this.showLoading(false);
+            console.error(`خطأ في جلب البيانات التقنية لـ ${item.symbol}:`, error);
         }
     }
-
-    async fetchMarketData() {
-        try {
-            // محاكاة جلب البيانات من Binance API
-            const symbols = await this.getBinanceSymbols();
-            const marketData = await this.getMarketData(symbols);
-            
-            this.opportunities = await this.analyzeOpportunities(marketData);
-            this.updateUI();
-            
-        } catch (error) {
-            console.error('خطأ في جلب البيانات:', error);
-        }
+}
+    getBinanceSymbols() {
+    // يمكن جلب هذه القائمة ديناميكياً من API إذا لزم الأمر
+    return [
+        'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT',
+        'SOLUSDT', 'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'SHIBUSDT',
+        'MATICUSDT', 'LTCUSDT', 'UNIUSDT', 'LINKUSDT', 'ATOMUSDT',
+        'ETCUSDT', 'XLMUSDT', 'BCHUSDT', 'FILUSDT', 'TRXUSDT',
+        'EOSUSDT', 'AAVEUSDT', 'GRTUSDT', 'MKRUSDT', 'COMPUSDT',
+        'YFIUSDT', 'SUSHIUSDT', '1INCHUSDT', 'CRVUSDT', 'SNXUSDT'
+    ];
+}
+updateRealTimeData() {
+    if (this.opportunities.length > 0) {
+        // يمكن تحسين هذا لترتيب الفرص بناءً على التغييرات الجديدة
+        this.updateUI();
     }
-
-    async getBinanceSymbols() {
-        // محاكاة أهم العملات المشفرة
-        return [
-            'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT',
-            'SOLUSDT', 'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'SHIBUSDT',
-            'MATICUSDT', 'LTCUSDT', 'UNIUSDT', 'LINKUSDT', 'ATOMUSDT',
-            'ETCUSDT', 'XLMUSDT', 'BCHUSDT', 'FILUSDT', 'TRXUSDT',
-            'EOSUSDT', 'AAVEUSDT', 'GRTUSDT', 'MKRUSDT', 'COMPUSDT',
-            'YFIUSDT', 'SUSHIUSDT', '1INCHUSDT', 'CRVUSDT', 'SNXUSDT'
-        ];
-    }
-
+}
     async getMarketData(symbols) {
         const marketData = [];
         
@@ -122,36 +230,38 @@ class CryptoTradingBot {
         };
     }
 
-    async analyzeOpportunities(marketData) {
-        const opportunities = [];
-        const analysisType = document.getElementById('analysisType').value;
-        const riskLevel = document.getElementById('riskLevel').value;
-        const minVolume = parseFloat(document.getElementById('minVolume').value);
+   async analyzeOpportunities(marketData) {
+    const opportunities = [];
+    const analysisType = document.getElementById('analysisType').value;
+    const riskLevel = document.getElementById('riskLevel').value;
+    const minVolume = parseFloat(document.getElementById('minVolume').value);
 
-        for (const data of marketData) {
-            if (data.volume < minVolume) continue;
+    for (const data of marketData) {
+        if (data.volume < minVolume) continue;
 
-            const analysis = this.performTechnicalAnalysis(data, analysisType, riskLevel);
-            
-            if (analysis.probability >= 60) {
-                opportunities.push({
-                    ...data,
-                    ...analysis,
-                    timestamp: new Date()
-                });
-            }
+        const analysis = this.performTechnicalAnalysis(data, analysisType, riskLevel);
+        
+        if (analysis.probability >= 60) {
+            opportunities.push({
+                ...data,
+                ...analysis,
+                timestamp: new Date()
+            });
         }
-
-        // ترتيب الفرص حسب الاحتمالية والربح المتوقع
-        opportunities.sort((a, b) => {
-            const scoreA = a.probability * a.expectedReturn;
-            const scoreB = b.probability * b.expectedReturn;
-            return scoreB - scoreA;
-        });
-
-        return opportunities.slice(0, 30);
     }
 
+    // ترتيب الفرص حسب الاحتمالية والربح المتوقع
+    opportunities.sort((a, b) => {
+        const scoreA = a.probability * a.expectedReturn;
+        const scoreB = b.probability * b.expectedReturn;
+        return scoreB - scoreA;
+    });
+
+    return opportunities.slice(0, 30);
+}
+    delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
     performTechnicalAnalysis(data, analysisType, riskLevel) {
         const signals = [];
         let signalType = 'hold';
