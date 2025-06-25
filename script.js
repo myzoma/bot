@@ -66,7 +66,7 @@ class CryptoTradingBot {
 async connectToBinance() {
     try {
         // اختبار الاتصال بالـ API
-        const response = await fetch('https://api.binance.com/api/v3/ping');
+        const response = await fetch('https://api1.binance.com/api/v3/ping');
         if (!response.ok) throw new Error('Binance connection failed');
         
         // إعداد WebSocket للبيانات المباشرة
@@ -123,7 +123,7 @@ async connectToBinance() {
    async fetchMarketData() {
     try {
         // جلب بيانات السوق من Binance API
-        const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
         const data = await response.json();
         
         const symbols = this.getBinanceSymbols();
@@ -155,7 +155,7 @@ async fetchTechnicalData(marketData) {
         try {
             // جلب بيانات الشموع للساعة الأخيرة
             const klinesResponse = await fetch(
-                `https://api.binance.com/api/v3/klines?symbol=${item.symbol}&interval=1h&limit=100`
+                `https://api1.binance.com/api/v3/klines?symbol=${item.symbol}&interval=1h&limit=100`
             );
             const klines = await klinesResponse.json();
             
