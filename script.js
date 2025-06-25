@@ -933,65 +933,34 @@ class CryptoTradingBot {
 class RealTimeCryptoBot extends CryptoTradingBot {
     constructor() {
         super();
-        this.isRealTime = true;
     }
 
     async start() {
-        console.log('🚀 بدء البوت مع الأسعار الصحيحة...');
-        
         try {
             const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
-            const allCoins = await response.json();
+            const data = await response.json();
             
-            console.log(`📊 تم جلب ${allCoins.length} عملة من Binance`);
-            
-            const filteredCoins = allCoins.filter(coin => {
-                const price = parseFloat(coin.lastPrice);
-                const volume = parseFloat(coin.quoteVolume);
-                const change = parseFloat(coin.priceChangePercent);
-                
-                if (price <= 0 || isNaN(price) || price > 200000) {
-                    return false;
-                }
-                
-                return (
-                    coin.symbol.endsWith('USDT') &&
-                    volume > 5000000 &&
-                    price > 0.0001 &&
-                    price < 50000 &&
-                    Math.abs(change) < 30 &&
-                    !['USDCUSDT', 'BUSDUSDT', 'TUSDUSDT', 'DAIUSDT'].includes(coin.symbol)
-                );
-            }).sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume)).slice(0, 20);
-            
-            this.cryptoData = filteredCoins.map(coin => {
-                const price = parseFloat(coin.lastPrice);
-                const change = parseFloat(coin.priceChangePercent);
-                
-                return {
-                    symbol: coin.symbol,
-                    price: price,
-                    change24h: change,
-                    volume: parseFloat(coin.volume),
-                    high24h: parseFloat(coin.highPrice),
-                    low24h: parseFloat(coin.lowPrice),
-                    rsi: Math.random() * 100,
-                    macd: (Math.random() - 0.5) * 2,
-                    volume_ratio: Math.random() * 3,
-                    support: price * 0.95,
-                    resistance: price * 1.05
-                };
-            });
-            
-            console.log(`✅ تم تحميل ${this.cryptoData.length} عملة بأسعار صحيحة`);
+            this.cryptoData = data.filter(coin => coin.symbol.endsWith('USDT')).slice(0, 15).map(coin => ({
+                symbol: coin.symbol,
+                price: parseFloat(coin.lastPrice),
+                change24h: parseFloat(coin.priceChangePercent),
+                volume: parseFloat(coin.volume),
+                high24h: parseFloat(coin.highPrice),
+                low24h: parseFloat(coin.lowPrice),
+                rsi: Math.random() * 100,
+                macd: (Math.random() - 0.5) * 2,
+                volume_ratio: Math.random() * 3,
+                support: parseFloat(coin.lastPrice) * 0.95,
+                resistance: parseFloat(coin.lastPrice) * 1.05
+            }));
             
         } catch (error) {
-            console.log('⚠️ خطأ - استخدام البيانات المحاكاة');
             this.loadMockData();
         }
         
         super.start();
-        
+    }
+}
         // تحديث كل 5 دقائق
         setTimeout(() => {
             console.log('🔄 تحديث الأسعار...');
