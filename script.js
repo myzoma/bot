@@ -115,7 +115,8 @@ processBinanceData(data) {
         low24h: parseFloat(data.l),
         timestamp: Date.now()
     };
-// تتبع تاريخ الأسعار
+
+    // تتبع تاريخ الأسعار
     this.trackPriceHistory(data.s, marketData.price);
     
     this.marketData.set(data.s, marketData);
@@ -125,6 +126,7 @@ processBinanceData(data) {
         this.updateRealTimeData();
     }
 }
+
     // تخزين البيانات فقط، بدون تحديث فوري
     this.marketData.set(data.s, marketData);
     
