@@ -11,7 +11,7 @@ class CryptoTradingBot {
 
     init() {
         this.setupEventListeners();
-        this.connectToAPI();
+        this.getMarketData();
         this.startAutoUpdate();
     }
 
