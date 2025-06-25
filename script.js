@@ -5,7 +5,8 @@ class CryptoTradingBot {
         this.lastUpdate = null;
         this.updateInterval = null;
         this.currentFilter = 'all';
-        
+        this.marketData = new Map(); // أضف هذا السطر
+}
         this.init();
     }
 
@@ -104,21 +105,18 @@ async connectToBinance() {
         setTimeout(() => this.setupBinanceWebSocket(), 5000); // إعادة الاتصال بعد 5 ثواني
     };
 }
-    processBinanceData(data) {
+   processBinanceData(data) {
     const marketData = {
-        exchange: 'Binance',
         symbol: data.s,
         price: parseFloat(data.c),
         change24h: parseFloat(data.P),
         volume: parseFloat(data.v),
         high24h: parseFloat(data.h),
-        low24h: parseFloat(data.l),
-        timestamp: Date.now()
+        low24h: parseFloat(data.l)
     };
     
-    // تخزين البيانات أو تحديثها
-    this.marketData.set(`binance_${data.s}`, marketData);
-    this.updateRealTimeData();
+    this.marketData.set(data.s, marketData);
+    this.updateOpportunitiesRealTime(); // أضف هذا
 }
    async fetchMarketData() {
     try {
@@ -198,37 +196,34 @@ updateRealTimeData() {
         this.updateUI();
     }
 }
-    async getMarketData(symbols) {
-        const marketData = [];
-        
-        for (const symbol of symbols) {
-            const data = this.generateMockData(symbol);
-            marketData.push(data);
-        }
-        
-        return marketData;
-    }
+  async getMarketData(symbols) {
+    const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
+    const data = await response.json();
+    return data.filter(item => symbols.includes(item.symbol))
+        .map(item => ({
+            symbol: item.symbol,
+            price: parseFloat(item.lastPrice),
+            change24h: parseFloat(item.priceChangePercent),
+            volume: parseFloat(item.volume),
+            high24h: parseFloat(item.highPrice),
+            low24h: parseFloat(item.lowPrice),
+            timestamp: Date.now()
+        }));
+}
 
-    generateMockData(symbol) {
-        const basePrice = Math.random() * 1000 + 10;
-        const change24h = (Math.random() - 0.5) * 20;
-        const volume = Math.random() * 10000000 + 500000;
-        
-        return {
-            symbol: symbol,
-            price: basePrice,
-            change24h: change24h,
-            volume: volume,
-            high24h: basePrice * (1 + Math.random() * 0.1),
-            low24h: basePrice * (1 - Math.random() * 0.1),
-            rsi: Math.random() * 100,
-            macd: (Math.random() - 0.5) * 2,
-            bb_position: Math.random(),
-            volume_ratio: Math.random() * 3 + 0.5,
-            support: basePrice * (1 - Math.random() * 0.05),
-            resistance: basePrice * (1 + Math.random() * 0.05)
-        };
-    }
+   async getMarketData(symbols) {
+    const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
+    const data = await response.json();
+    return data.filter(item => symbols.includes(item.symbol))
+        .map(item => ({
+            symbol: item.symbol,
+            price: parseFloat(item.lastPrice),
+            change24h: parseFloat(item.priceChangePercent),
+            volume: parseFloat(item.volume),
+            high24h: parseFloat(item.highPrice),
+            low24h: parseFloat(item.lowPrice)
+        }));
+}
 
    async analyzeOpportunities(marketData) {
     const opportunities = [];
@@ -268,40 +263,46 @@ updateRealTimeData() {
         let probability = 50;
         let expectedReturn = 0;
 
-        // تحليل RSI
-        if (data.rsi < 30) {
-            signals.push('RSI oversold');
-            signalType = 'buy';
-            probability += 15;
-        } else if (data.rsi > 70) {
-            signals.push('RSI overbought');
-            signalType = 'sell';
-            probability += 15;
-        }
+       calculateRSI(prices, period = 14) {
+    const gains = [], losses = [];
+    for (let i = 1; i < prices.length; i++) {
+        const change = prices[i] - prices[i-1];
+        gains.push(change > 0 ? change : 0);
+        losses.push(change < 0 ? Math.abs(change) : 0);
+    }
+    const avgGain = gains.slice(-period).reduce((a,b) => a+b) / period;
+    const avgLoss = losses.slice(-period).reduce((a,b) => a+b) / period;
+    return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
+}
 
-        // تحليل MACD
-        if (data.macd > 0) {
-            signals.push('MACD bullish');
-            if (signalType === 'buy') probability += 10;
-        } else {
-            signals.push('MACD bearish');
-            if (signalType === 'sell') probability += 10;
-        }
+calculateMACD(prices) {
+    const ema12 = this.calculateEMA(prices, 12);
+    const ema26 = this.calculateEMA(prices, 26);
+    return { macd: ema12 - ema26 };
+}
 
-        // تحليل Bollinger Bands
-        if (data.bb_position < 0.2) {
-            signals.push('BB lower band');
-            if (signalType === 'buy') probability += 10;
-        } else if (data.bb_position > 0.8) {
-            signals.push('BB upper band');
-            if (signalType === 'sell') probability += 10;
-        }
+calculateEMA(prices, period) {
+    const multiplier = 2 / (period + 1);
+    let ema = prices[0];
+    for (let i = 1; i < prices.length; i++) {
+        ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+    }
+    return ema;
+}
 
-        // تحليل الحجم
-        if (data.volume_ratio > 2) {
-            signals.push('High volume');
-            probability += 10;
-        }
+calculateBollingerPosition(prices, period = 20) {
+    const sma = prices.slice(-period).reduce((a,b) => a+b) / period;
+    const variance = prices.slice(-period).reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
+    const stdDev = Math.sqrt(variance);
+    const currentPrice = prices[prices.length - 1];
+    return (currentPrice - (sma - 2 * stdDev)) / (4 * stdDev);
+}
+
+calculateVolumeRatio(volumes) {
+    const avgVolume = volumes.slice(-20).reduce((a,b) => a+b) / 20;
+    return volumes[volumes.length - 1] / avgVolume;
+}
+
 
         // حساب الأهداف والمخاطر
         const targets = this.calculateTargets(data, signalType, analysisType);
