@@ -928,43 +928,29 @@ class CryptoTradingBot {
         console.log('⏹️ تم إيقاف بوت اكتشاف الفرص');
     }
 }
-// أضف هذا قبل السطر الأخير في script.js
 
-// استبدل class RealTimeCryptoBot بهذا:
+// احذف class RealTimeCryptoBot الموجود كاملاً واستبدله بهذا:
 class RealTimeCryptoBot extends CryptoTradingBot {
     constructor() {
         super();
         this.isRealTime = true;
     }
 
-   // استبدل كل محتوى start() بهذا:
     async start() {
-        console.log('🚀 بدء البوت مع التحقق من الأسعار...');
+        console.log('🚀 بدء البوت مع الأسعار الصحيحة...');
         
         try {
-            // تحقق من عينة من الأسعار أولاً
-            const testSymbols = ['BTCUSDT', 'ETHUSDT', 'TRXUSDT'];
-            for (let symbol of testSymbols) {
-                const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
-                const data = await response.json();
-                console.log(`✅ ${symbol}: $${parseFloat(data.price).toFixed(6)}`);
-            }
-            
-            // جلب جميع العملات
             const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
             const allCoins = await response.json();
             
             console.log(`📊 تم جلب ${allCoins.length} عملة من Binance`);
             
-            // الفلترة الذكية مع التحقق
             const filteredCoins = allCoins.filter(coin => {
                 const price = parseFloat(coin.lastPrice);
                 const volume = parseFloat(coin.quoteVolume);
                 const change = parseFloat(coin.priceChangePercent);
                 
-                // تحقق من صحة البيانات
                 if (price <= 0 || isNaN(price) || price > 200000) {
-                    console.warn(`⚠️ سعر غير صحيح: ${coin.symbol} = $${price}`);
                     return false;
                 }
                 
@@ -976,20 +962,11 @@ class RealTimeCryptoBot extends CryptoTradingBot {
                     Math.abs(change) < 30 &&
                     !['USDCUSDT', 'BUSDUSDT', 'TUSDUSDT', 'DAIUSDT'].includes(coin.symbol)
                 );
-            })
-            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-            .slice(0, 20);
-            
-            console.log('🎯 العملات المختارة مع الأسعار الصحيحة:');
+            }).sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume)).slice(0, 20);
             
             this.cryptoData = filteredCoins.map(coin => {
                 const price = parseFloat(coin.lastPrice);
                 const change = parseFloat(coin.priceChangePercent);
-                const volume = parseFloat(coin.quoteVolume);
-                
-                // عرض السعر بالتنسيق الصحيح
-                const displayPrice = price < 1 ? price.toFixed(6) : price.toFixed(2);
-                console.log(`${coin.symbol}: $${displayPrice} (${change > 0 ? '+' : ''}${change.toFixed(2)}%)`);
                 
                 return {
                     symbol: coin.symbol,
@@ -998,24 +975,25 @@ class RealTimeCryptoBot extends CryptoTradingBot {
                     volume: parseFloat(coin.volume),
                     high24h: parseFloat(coin.highPrice),
                     low24h: parseFloat(coin.lowPrice),
-                    volumeUSD: volume,
                     rsi: Math.random() * 100,
                     macd: (Math.random() - 0.5) * 2,
                     volume_ratio: Math.random() * 3,
                     support: price * 0.95,
-                    resistance: price * 1.05,
-                    lastUpdate: new Date().toLocaleTimeString('ar-SA')
+                    resistance: price * 1.05
                 };
             });
             
             console.log(`✅ تم تحميل ${this.cryptoData.length} عملة بأسعار صحيحة`);
             
         } catch (error) {
-            console.error('❌ خطأ في البيانات:', error);
+            console.log('⚠️ خطأ - استخدام البيانات المحاكاة');
             this.loadMockData();
         }
         
         super.start();
+    }
+}
+
         
         // تحديث كل 5 دقائق
         setTimeout(() => {
