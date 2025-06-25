@@ -8,6 +8,7 @@ class CryptoTradingBot {
         this.marketData = new Map();
          this.isUpdating = false; // أضف هذا السطر
           this.isLoading = false; // أضف هذا السطر
+          this.priceHistory = new Map(); // أضف هذا
         this.init(); // نقل هذا السطر داخل الـ constructor
     }
 
@@ -114,7 +115,16 @@ processBinanceData(data) {
         low24h: parseFloat(data.l),
         timestamp: Date.now()
     };
-
+// تتبع تاريخ الأسعار
+    this.trackPriceHistory(data.s, marketData.price);
+    
+    this.marketData.set(data.s, marketData);
+    
+    if (!this.lastWSUpdate || Date.now() - this.lastWSUpdate > 5000) {
+        this.lastWSUpdate = Date.now();
+        this.updateRealTimeData();
+    }
+}
     // تخزين البيانات فقط، بدون تحديث فوري
     this.marketData.set(data.s, marketData);
     
@@ -390,6 +400,15 @@ startAutoUpdate() {
     }
 
         // حساب الأهداف والمخاطر
+        // بعد حساب targets، أضف:
+const targetStatus = this.checkTargetStatus(data, targets, signalType);
+if (targetStatus.completed) {
+    // إذا تم تحقيق الهدف، غير الإشارة
+    signalType = 'hold';
+    probability = 30; // قلل الاحتمالية
+    signals.push(`Target ${targetStatus.level} hit - Exit signal`);
+}
+
         const targets = this.calculateTargets(data, signalType, analysisType);
         const stopLoss = this.calculateStopLoss(data, signalType, riskLevel);
         
