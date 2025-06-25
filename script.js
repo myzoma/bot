@@ -43,40 +43,7 @@ class CryptoTradingBot {
             this.refreshData();
         });
     }
-
-    async connectToAPI() {
-        try {
-            this.showLoading(true);
-            
-            // محاكاة الاتصال بـ API
-            await this.delay(2000);
-            
-            this.isConnected = true;
-            this.updateConnectionStatus();
-            await this.fetchMarketData();
-            
-        } catch (error) {
-            console.error('خطأ في الاتصال:', error);
-            this.isConnected = false;
-            this.updateConnectionStatus();
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    async fetchMarketData() {
-        try {
-            // محاكاة جلب البيانات من Binance API
-            const symbols = await this.getBinanceSymbols();
-            const marketData = await this.getMarketData(symbols);
-            
-            this.opportunities = await this.analyzeOpportunities(marketData);
-            this.updateUI();
-            
-        } catch (error) {
-            console.error('خطأ في جلب البيانات:', error);
-        }
-    }
+    
 async getMarketData() {
     const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
     const data = await response.json();
