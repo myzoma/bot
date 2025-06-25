@@ -101,31 +101,55 @@ class CryptoTradingBot {
 
 } // ← هذا القوس الأخير للكلاس
 async getMarketData() {
-    const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
-    const data = await response.json();
-  // أضف هذا السطر:
-    this.cryptoData = data
-        .filter(coin => coin.symbol.endsWith('USDT') && /^[A-Z]+USDT$/.test(coin.symbol))
-        .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-        .slice(0, 15)
-        .map(coin => ({
-            symbol: coin.symbol,
-            price: parseFloat(coin.lastPrice),
-            change24h: parseFloat(coin.priceChangePercent),
-            volume: parseFloat(coin.volume),
-            high24h: parseFloat(coin.highPrice),
-            low24h: parseFloat(coin.lowPrice),
-            rsi: Math.random() * 100,
-            macd: (Math.random() - 0.5) * 2,
-            bb_position: Math.random(),
-            volume_ratio: Math.random() * 3 + 0.5,
-            support: parseFloat(coin.lastPrice) * 0.95,
-            resistance: parseFloat(coin.lastPrice) * 1.05
-        }));
-    
-    // احذف return واستبدله بـ:
-    console.log(`✅ تم جلب ${this.cryptoData.length} عملة من Binance`);
+    try {
+        console.log('🔄 جاري جلب بيانات العملات...');
+        this.showLoading(true);
+        
+        const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        this.cryptoData = data
+            .filter(coin => coin.symbol.endsWith('USDT') && /^[A-Z]+USDT$/.test(coin.symbol))
+            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+            .slice(0, 15)
+            .map(coin => ({
+                symbol: coin.symbol,
+                price: parseFloat(coin.lastPrice),
+                change24h: parseFloat(coin.priceChangePercent),
+                volume: parseFloat(coin.volume),
+                high24h: parseFloat(coin.highPrice),
+                low24h: parseFloat(coin.lowPrice),
+                rsi: Math.random() * 100,
+                macd: (Math.random() - 0.5) * 2,
+                bb_position: Math.random(),
+                volume_ratio: Math.random() * 3 + 0.5,
+                support: parseFloat(coin.lastPrice) * 0.95,
+                resistance: parseFloat(coin.lastPrice) * 1.05
+            }));
+
+        console.log(`✅ تم جلب ${this.cryptoData.length} عملة من Binance`);
+        
+        // إضافة هذا السطر المهم المفقود:
+        await this.processMarketData();
+        
+        this.isConnected = true;
+        this.updateConnectionStatus();
+        
+    } catch (error) {
+        console.error('❌ خطأ في جلب البيانات:', error);
+        this.isConnected = false;
+        this.updateConnectionStatus();
+        this.showError('فشل في جلب بيانات العملات. يرجى المحاولة مرة أخرى.');
+    } finally {
+        this.showLoading(false);
+    }
 }
+
    
     async analyzeOpportunities(marketData) {
         const opportunities = [];
