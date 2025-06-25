@@ -2035,7 +2035,8 @@ class EnhancedCryptoTradingBot extends CryptoTradingBot {
 
 // استبدال البوت القديم بالمحسن
 document.addEventListener('DOMContentLoaded', () => {
-    const enhancedBot = new EnhancedCryptoTradingBot();
+   const enhancedBot = new RealTimeCryptoBot();
+
     enhancedBot.start();
     
     // حفظ مرجع البوت المحسن
