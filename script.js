@@ -5,9 +5,8 @@ class CryptoTradingBot {
         this.lastUpdate = null;
         this.updateInterval = null;
         this.currentFilter = 'all';
-        this.marketData = new Map(); // أضف هذا السطر
-}
-        this.init();
+        this.marketData = new Map();
+        this.init(); // نقل هذا السطر داخل الـ constructor
     }
 
     init() {
@@ -15,6 +14,7 @@ class CryptoTradingBot {
         this.connectToAPI();
         this.startAutoUpdate();
     }
+
 
     setupEventListeners() {
         // Refresh button
