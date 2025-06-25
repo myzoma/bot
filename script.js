@@ -116,9 +116,6 @@ processBinanceData(data) {
         timestamp: Date.now()
     };
 
-    // تتبع تاريخ الأسعار
-    this.trackPriceHistory(data.s, marketData.price);
-    
     this.marketData.set(data.s, marketData);
     
     if (!this.lastWSUpdate || Date.now() - this.lastWSUpdate > 5000) {
