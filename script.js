@@ -77,51 +77,32 @@ class CryptoTradingBot {
             console.error('خطأ في جلب البيانات:', error);
         }
     }
+async getMarketData() {
+    const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
+    const data = await response.json();
 
-    async getBinanceSymbols() {
-        // محاكاة أهم العملات المشفرة
-        return [
-            'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT',
-            'SOLUSDT', 'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'SHIBUSDT',
-            'MATICUSDT', 'LTCUSDT', 'UNIUSDT', 'LINKUSDT', 'ATOMUSDT',
-            'ETCUSDT', 'XLMUSDT', 'BCHUSDT', 'FILUSDT', 'TRXUSDT',
-            'EOSUSDT', 'AAVEUSDT', 'GRTUSDT', 'MKRUSDT', 'COMPUSDT',
-            'YFIUSDT', 'SUSHIUSDT', '1INCHUSDT', 'CRVUSDT', 'SNXUSDT'
-        ];
-    }
-
-    async getMarketData(symbols) {
-        const marketData = [];
-        
-        for (const symbol of symbols) {
-            const data = this.generateMockData(symbol);
-            marketData.push(data);
-        }
-        
-        return marketData;
-    }
-
-    generateMockData(symbol) {
-        const basePrice = Math.random() * 1000 + 10;
-        const change24h = (Math.random() - 0.5) * 20;
-        const volume = Math.random() * 10000000 + 500000;
-        
-        return {
-            symbol: symbol,
-            price: basePrice,
-            change24h: change24h,
-            volume: volume,
-            high24h: basePrice * (1 + Math.random() * 0.1),
-            low24h: basePrice * (1 - Math.random() * 0.1),
-            rsi: Math.random() * 100,
-            macd: (Math.random() - 0.5) * 2,
-            bb_position: Math.random(),
-            volume_ratio: Math.random() * 3 + 0.5,
-            support: basePrice * (1 - Math.random() * 0.05),
-            resistance: basePrice * (1 + Math.random() * 0.05)
-        };
-    }
-
+    // فلترة أزواج USDT وترتيب حسب السيولة/الحجم
+    return data
+      .filter(coin => coin.symbol.endsWith('USDT') && /^[A-Z]+USDT$/.test(coin.symbol))
+      .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+      .slice(0, 15) // أو أي عدد تريد عرضه
+      .map(coin => ({
+          symbol: coin.symbol,
+          price: parseFloat(coin.lastPrice),
+          change24h: parseFloat(coin.priceChangePercent),
+          volume: parseFloat(coin.volume),
+          high24h: parseFloat(coin.highPrice),
+          low24h: parseFloat(coin.lowPrice),
+          // المؤشرات التالية عشوائية (لو تريدها واقعية تحتاج تحليل آخر)
+          rsi: Math.random() * 100,
+          macd: (Math.random() - 0.5) * 2,
+          bb_position: Math.random(),
+          volume_ratio: Math.random() * 3 + 0.5,
+          support: parseFloat(coin.lastPrice) * 0.95,
+          resistance: parseFloat(coin.lastPrice) * 1.05
+      }));
+}
+   
     async analyzeOpportunities(marketData) {
         const opportunities = [];
         const analysisType = document.getElementById('analysisType').value;
