@@ -940,7 +940,7 @@ class RealTimeCryptoBot extends CryptoTradingBot {
         console.log('🚀 بدء البوت مع الأسعار الصحيحة...');
         
         try {
-            const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+            const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
             const allCoins = await response.json();
             
             console.log(`📊 تم جلب ${allCoins.length} عملة من Binance`);
@@ -991,17 +991,14 @@ class RealTimeCryptoBot extends CryptoTradingBot {
         }
         
         super.start();
-    }
-}
-
         
         // تحديث كل 5 دقائق
         setTimeout(() => {
             console.log('🔄 تحديث الأسعار...');
             this.start();
         }, 300000);
-    }
-}
+    } // ← قوس واحد فقط هنا
+} // ← قوس واحد فقط هنا
     
     // إضافة معلومات الفلترة للواجهة
     displayFilterInfo() {
