@@ -72,7 +72,7 @@ class CryptoTradingBot {
 
     async connectToBinance() {
         try {
-            const response = await fetch('https://api.binance.com/api/v3/ping');
+            const response = await fetch('https://api1.binance.com/api/v3/ping');
             if (!response.ok) throw new Error('Binance connection failed');
             
             this.setupBinanceWebSocket();
@@ -211,7 +211,7 @@ class CryptoTradingBot {
 
     async fetchBinanceData() {
         try {
-            const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+            const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
             const data = await response.json();
             
             const symbols = this.getBinanceSymbols();
@@ -279,7 +279,7 @@ class CryptoTradingBot {
         for (const symbol of symbols) {
             try {
                 const klinesResponse = await fetch(
-                    `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=100`
+                    `https://api1.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=100`
                 );
                 const klines = await klinesResponse.json();
                 
