@@ -936,36 +936,41 @@ class RealTimeCryptoBot extends CryptoTradingBot {
     }
 
     async start() {
-        try {
-            const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
-            const data = await response.json();
-            
-            this.cryptoData = data.filter(coin => coin.symbol.endsWith('USDT')).slice(0, 15).map(coin => ({
+    try {
+        const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
+        const data = await response.json();
+
+        // فلترة عملات USDT فقط، ثم ترتيب حسب حجم التداول (الأعلى أولاً)، ثم أخذ أول 15 عملة تلقائياً
+        this.cryptoData = data
+            .filter(coin => coin.symbol.endsWith('USDT') && !coin.symbol.includes('UPUSDT') && !coin.symbol.includes('DOWNUSDT')) // تجاهل عملات UP/DOWN المشتقة
+            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume)) // ترتيب حسب حجم التداول
+            .slice(0, 15) // خذ فقط أعلى 15 عملة سيولة
+            .map(coin => ({
                 symbol: coin.symbol,
                 price: parseFloat(coin.lastPrice),
                 change24h: parseFloat(coin.priceChangePercent),
                 volume: parseFloat(coin.volume),
                 high24h: parseFloat(coin.highPrice),
                 low24h: parseFloat(coin.lowPrice),
-                rsi: Math.random() * 100,
-                macd: (Math.random() - 0.5) * 2,
-                volume_ratio: Math.random() * 3,
+                rsi: Math.random() * 100,        // (يمكنك تطوير هذا لاحقاً)
+                macd: (Math.random() - 0.5) * 2, // (يمكنك تطوير هذا لاحقاً)
+                volume_ratio: Math.random() * 3, // (يمكنك تطوير هذا لاحقاً)
                 support: parseFloat(coin.lastPrice) * 0.95,
                 resistance: parseFloat(coin.lastPrice) * 1.05
             }));
-        } catch (error) {
-            this.loadMockData();
-        }
-        
-        super.start();
-
-        // تحديث كل 5 دقائق
-        setTimeout(() => {
-            console.log('🔄 تحديث الأسعار...');
-            this.start();
-        }, 300000);
+    } catch (error) {
+        alert('تعذر جلب بيانات Binance. تأكد من اتصال الإنترنت أو جرب لاحقاً.');
+        this.cryptoData = [];
+        return;
     }
 
+    super.start();
+
+    setTimeout(() => {
+        console.log('🔄 تحديث الأسعار...');
+        this.start();
+    }, 300000);
+}
     
     // إضافة معلومات الفلترة للواجهة
     displayFilterInfo() {
