@@ -965,7 +965,7 @@ class RealTimeCryptoBot extends CryptoTradingBot {
             this.start();
         }, 300000);
     }
-}
+
     
     // إضافة معلومات الفلترة للواجهة
     displayFilterInfo() {
