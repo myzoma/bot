@@ -101,19 +101,22 @@ async connectToBinance() {
     };
 }
 
-   processBinanceData(data) {
+  processBinanceData(data) {
     const marketData = {
+        exchange: 'Binance',
         symbol: data.s,
         price: parseFloat(data.c),
         change24h: parseFloat(data.P),
         volume: parseFloat(data.v),
         high24h: parseFloat(data.h),
-        low24h: parseFloat(data.l)
+        low24h: parseFloat(data.l),
+        timestamp: Date.now()
     };
-    
-    this.marketData.set(data.s, marketData);
-    this.updateOpportunitiesRealTime(); // أضف هذا
+
+    this.marketData.set(`binance_${data.s}`, marketData);
+    this.updateRealTimeData();
 }
+
    async fetchMarketData() {
     try {
         // جلب بيانات السوق من Binance API
@@ -252,6 +255,85 @@ updateRealTimeData() {
 }
    delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+calculateRSI(prices, period = 14) {
+    if (prices.length < period + 1) return 50;
+    
+    const gains = [];
+    const losses = [];
+    
+    for (let i = 1; i < prices.length; i++) {
+        const change = prices[i] - prices[i-1];
+        gains.push(change > 0 ? change : 0);
+        losses.push(change < 0 ? Math.abs(change) : 0);
+    }
+    
+    const avgGain = gains.slice(-period).reduce((a,b) => a+b, 0) / period;
+    const avgLoss = losses.slice(-period).reduce((a,b) => a+b, 0) / period;
+    
+    if (avgLoss === 0) return 100;
+    return 100 - (100 / (1 + (avgGain / avgLoss)));
+}
+
+calculateMACD(prices) {
+    if (prices.length < 26) return { macd: 0 };
+    
+    const ema12 = this.calculateEMA(prices, 12);
+    const ema26 = this.calculateEMA(prices, 26);
+    return { macd: ema12 - ema26 };
+}
+
+calculateEMA(prices, period) {
+    if (prices.length === 0) return 0;
+    
+    const multiplier = 2 / (period + 1);
+    let ema = prices[0];
+    
+    for (let i = 1; i < prices.length; i++) {
+        ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+    }
+    return ema;
+}
+
+calculateBollingerPosition(prices, period = 20) {
+    if (prices.length < period) return 0.5;
+    
+    const recentPrices = prices.slice(-period);
+    const sma = recentPrices.reduce((a,b) => a+b, 0) / period;
+    const variance = recentPrices.reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
+    const stdDev = Math.sqrt(variance);
+    
+    if (stdDev === 0) return 0.5;
+    
+    const currentPrice = prices[prices.length - 1];
+    const upperBand = sma + (2 * stdDev);
+    const lowerBand = sma - (2 * stdDev);
+    
+    return (currentPrice - lowerBand) / (upperBand - lowerBand);
+}
+
+calculateVolumeRatio(volumes) {
+    if (volumes.length < 20) return 1;
+    
+    const recentVolumes = volumes.slice(-20);
+    const avgVolume = recentVolumes.reduce((a,b) => a+b, 0) / 20;
+    
+    if (avgVolume === 0) return 1;
+    return volumes[volumes.length - 1] / avgVolume;
+}
+
+async refreshData() {
+    await this.fetchMarketData();
+}
+
+startAutoUpdate() {
+    if (this.updateInterval) {
+        clearInterval(this.updateInterval);
+    }
+    
+    this.updateInterval = setInterval(() => {
+        this.fetchMarketData();
+    }, 30000);
 }
 
     performTechnicalAnalysis(data, analysisType, riskLevel) {
