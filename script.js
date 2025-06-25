@@ -11,7 +11,7 @@ class CryptoTradingBot {
 
     init() {
         this.setupEventListeners();
-        this.getMarketData();
+        this.connectToAPI();
         this.startAutoUpdate();
     }
 
@@ -43,114 +43,85 @@ class CryptoTradingBot {
             this.refreshData();
         });
     }
-     // ← أضف الـ methods الجديدة هنا (قبل القوس الأخير للكلاس)
-    
-    saveSettings() {
-        console.log('💾 تم حفظ الإعدادات');
-        localStorage.setItem('cryptoBotSettings', JSON.stringify({
-            lastUpdate: new Date().toISOString(),
-            opportunitiesCount: this.opportunities.length
-        }));
-    }
 
-    refreshData() {
-        console.log('🔄 تحديث البيانات...');
-        this.getMarketData();
-        console.log('✅ تم تحديث البيانات');
-    }
-
-    exportOpportunities() {
-        console.log('📤 تصدير الفرص...');
-        const data = JSON.stringify(this.opportunities, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'crypto-opportunities.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        console.log('✅ تم تصدير الفرص');
-    }
-
-    loadSettings() {
-        const saved = localStorage.getItem('cryptoBotSettings');
-        if (saved) {
-            const settings = JSON.parse(saved);
-            console.log('📂 تم تحميل الإعدادات المحفوظة');
-            return settings;
+    async connectToAPI() {
+        try {
+            this.showLoading(true);
+            
+            // محاكاة الاتصال بـ API
+            await this.delay(2000);
+            
+            this.isConnected = true;
+            this.updateConnectionStatus();
+            await this.fetchMarketData();
+            
+        } catch (error) {
+            console.error('خطأ في الاتصال:', error);
+            this.isConnected = false;
+            this.updateConnectionStatus();
+        } finally {
+            this.showLoading(false);
         }
-        return null;
     }
 
-    stop() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
+    async fetchMarketData() {
+        try {
+            // محاكاة جلب البيانات من Binance API
+            const symbols = await this.getBinanceSymbols();
+            const marketData = await this.getMarketData(symbols);
+            
+            this.opportunities = await this.analyzeOpportunities(marketData);
+            this.updateUI();
+            
+        } catch (error) {
+            console.error('خطأ في جلب البيانات:', error);
         }
-        this.isConnected = false;
-        console.log('⏹️ تم إيقاف البوت');
     }
 
-    getStatus() {
+    async getBinanceSymbols() {
+        // محاكاة أهم العملات المشفرة
+        return [
+            'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT', 'XRPUSDT',
+            'SOLUSDT', 'DOTUSDT', 'DOGEUSDT', 'AVAXUSDT', 'SHIBUSDT',
+            'MATICUSDT', 'LTCUSDT', 'UNIUSDT', 'LINKUSDT', 'ATOMUSDT',
+            'ETCUSDT', 'XLMUSDT', 'BCHUSDT', 'FILUSDT', 'TRXUSDT',
+            'EOSUSDT', 'AAVEUSDT', 'GRTUSDT', 'MKRUSDT', 'COMPUSDT',
+            'YFIUSDT', 'SUSHIUSDT', '1INCHUSDT', 'CRVUSDT', 'SNXUSDT'
+        ];
+    }
+
+    async getMarketData(symbols) {
+        const marketData = [];
+        
+        for (const symbol of symbols) {
+            const data = this.generateMockData(symbol);
+            marketData.push(data);
+        }
+        
+        return marketData;
+    }
+
+    generateMockData(symbol) {
+        const basePrice = Math.random() * 1000 + 10;
+        const change24h = (Math.random() - 0.5) * 20;
+        const volume = Math.random() * 10000000 + 500000;
+        
         return {
-            isConnected: this.isConnected,
-            opportunitiesCount: this.opportunities.length,
-            lastUpdate: this.lastUpdate,
-            currentFilter: this.currentFilter
+            symbol: symbol,
+            price: basePrice,
+            change24h: change24h,
+            volume: volume,
+            high24h: basePrice * (1 + Math.random() * 0.1),
+            low24h: basePrice * (1 - Math.random() * 0.1),
+            rsi: Math.random() * 100,
+            macd: (Math.random() - 0.5) * 2,
+            bb_position: Math.random(),
+            volume_ratio: Math.random() * 3 + 0.5,
+            support: basePrice * (1 - Math.random() * 0.05),
+            resistance: basePrice * (1 + Math.random() * 0.05)
         };
     }
 
-} // ← هذا القوس الأخير للكلاس
-async getMarketData() {
-    try {
-        console.log('🔄 جاري جلب بيانات العملات...');
-        this.showLoading(true);
-        
-        const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        this.cryptoData = data
-            .filter(coin => coin.symbol.endsWith('USDT') && /^[A-Z]+USDT$/.test(coin.symbol))
-            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-            .slice(0, 15)
-            .map(coin => ({
-                symbol: coin.symbol,
-                price: parseFloat(coin.lastPrice),
-                change24h: parseFloat(coin.priceChangePercent),
-                volume: parseFloat(coin.volume),
-                high24h: parseFloat(coin.highPrice),
-                low24h: parseFloat(coin.lowPrice),
-                rsi: Math.random() * 100,
-                macd: (Math.random() - 0.5) * 2,
-                bb_position: Math.random(),
-                volume_ratio: Math.random() * 3 + 0.5,
-                support: parseFloat(coin.lastPrice) * 0.95,
-                resistance: parseFloat(coin.lastPrice) * 1.05
-            }));
-
-        console.log(`✅ تم جلب ${this.cryptoData.length} عملة من Binance`);
-        
-        // إضافة هذا السطر المهم المفقود:
-        await this.processMarketData();
-        
-        this.isConnected = true;
-        this.updateConnectionStatus();
-        
-    } catch (error) {
-        console.error('❌ خطأ في جلب البيانات:', error);
-        this.isConnected = false;
-        this.updateConnectionStatus();
-        this.showError('فشل في جلب بيانات العملات. يرجى المحاولة مرة أخرى.');
-    } finally {
-        this.showLoading(false);
-    }
-}
-
-   
     async analyzeOpportunities(marketData) {
         const opportunities = [];
         const analysisType = document.getElementById('analysisType').value;
@@ -616,7 +587,7 @@ async getMarketData() {
         return patterns;
     }
 
-    isHammer(candle) {
+      isHammer(candle) {
         const bodySize = Math.abs(candle.close - candle.open);
         const lowerShadow = candle.open < candle.close ? 
             candle.open - candle.low : candle.close - candle.low;
@@ -957,73 +928,6 @@ async getMarketData() {
         console.log('⏹️ تم إيقاف بوت اكتشاف الفرص');
     }
 }
-
-// احذف class RealTimeCryptoBot الموجود كاملاً واستبدله بهذا:
-class RealTimeCryptoBot extends CryptoTradingBot {
-    constructor() {
-        super();
-    }
-
-    async start() {
-         await this.getMarketData(); // ← await مهم
-    this.analyzeOpportunities();
-    this.displayOpportunities();
-    try {
-        const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
-        const data = await response.json();
-
-        // فلترة عملات USDT فقط، ثم ترتيب حسب حجم التداول (الأعلى أولاً)، ثم أخذ أول 15 عملة تلقائياً
-        this.cryptoData = data
-            .filter(coin => coin.symbol.endsWith('USDT') && !coin.symbol.includes('UPUSDT') && !coin.symbol.includes('DOWNUSDT')) // تجاهل عملات UP/DOWN المشتقة
-            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume)) // ترتيب حسب حجم التداول
-            .slice(0, 15) // خذ فقط أعلى 15 عملة سيولة
-            .map(coin => ({
-                symbol: coin.symbol,
-                price: parseFloat(coin.lastPrice),
-                change24h: parseFloat(coin.priceChangePercent),
-                volume: parseFloat(coin.volume),
-                high24h: parseFloat(coin.highPrice),
-                low24h: parseFloat(coin.lowPrice),
-                rsi: Math.random() * 100,        // (يمكنك تطوير هذا لاحقاً)
-                macd: (Math.random() - 0.5) * 2, // (يمكنك تطوير هذا لاحقاً)
-                volume_ratio: Math.random() * 3, // (يمكنك تطوير هذا لاحقاً)
-                support: parseFloat(coin.lastPrice) * 0.95,
-                resistance: parseFloat(coin.lastPrice) * 1.05
-            }));
-    } catch (error) {
-        alert('تعذر جلب بيانات Binance. تأكد من اتصال الإنترنت أو جرب لاحقاً.');
-        this.cryptoData = [];
-        return;
-    }
-
-    super.start();
-
-    setTimeout(() => {
-        console.log('🔄 تحديث الأسعار...');
-        this.start();
-    }, 300000);
-}
-    
-    // إضافة معلومات الفلترة للواجهة
-    displayFilterInfo() {
-        const filterInfo = document.createElement('div');
-        filterInfo.className = 'filter-info';
-        filterInfo.innerHTML = `
-            <h3>🤖 معايير الاختيار التلقائي:</h3>
-            <ul>
-                <li>✅ عملات USDT فقط</li>
-                <li>📊 حجم تداول > $10M</li>
-                <li>💰 سعر بين $0.01 - $100K</li>
-                <li>📈 تقلبات < 50%</li>
-                <li>🚫 تجنب العملات المستقرة</li>
-                <li>🏆 ترتيب حسب السيولة</li>
-            </ul>
-        `;
-        
-        document.querySelector('.opportunities-section').prepend(filterInfo);
-    }
-}
-
 
 // تشغيل البوت عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
@@ -1439,7 +1343,7 @@ function addBacktestInterface() {
     document.querySelector('.portfolio-section').after(backtestSection);
     
     // إضافة وظائف التحكم
-      document.getElementById('backtestToggle').addEventListener('click', function() {
+        document.getElementById('backtestToggle').addEventListener('click', function() {
         const content = document.querySelector('.backtest-content');
         const isVisible = content.style.display !== 'none';
         
@@ -2131,8 +2035,7 @@ class EnhancedCryptoTradingBot extends CryptoTradingBot {
 
 // استبدال البوت القديم بالمحسن
 document.addEventListener('DOMContentLoaded', () => {
-   const enhancedBot = new RealTimeCryptoBot();
-
+    const enhancedBot = new EnhancedCryptoTradingBot();
     enhancedBot.start();
     
     // حفظ مرجع البوت المحسن
