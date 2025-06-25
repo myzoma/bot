@@ -246,16 +246,9 @@ async analyzeOpportunities() {
             }
         }
     
-    // ... (باقي الدوال كما هي بدون تغيير: analyzeOpportunities, performTechnicalAnalysis, إلخ)
+  
 
-    stop() {
-        super.stop();
-        if (this.ws) {
-            this.ws.close();
-            this.ws = null;
-        }
-    }
-}
+  
 performTechnicalAnalysis(data, analysisType, riskLevel) {
         const signals = [];
         let signalType = 'hold';
