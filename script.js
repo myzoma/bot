@@ -6,6 +6,7 @@ class CryptoTradingBot {
         this.updateInterval = null;
         this.currentFilter = 'all';
         this.marketData = new Map();
+         this.isUpdating = false; // أضف هذا السطر
         this.init(); // نقل هذا السطر داخل الـ constructor
     }
 
@@ -101,7 +102,7 @@ async connectToBinance() {
     };
 }
 
-  processBinanceData(data) {
+processBinanceData(data) {
     const marketData = {
         exchange: 'Binance',
         symbol: data.s,
@@ -113,8 +114,14 @@ async connectToBinance() {
         timestamp: Date.now()
     };
 
-    this.marketData.set(`binance_${data.s}`, marketData);
-    this.updateRealTimeData();
+    // تخزين البيانات فقط، بدون تحديث فوري
+    this.marketData.set(data.s, marketData);
+    
+    // تحديث محدود
+    if (!this.lastWSUpdate || Date.now() - this.lastWSUpdate > 5000) {
+        this.lastWSUpdate = Date.now();
+        this.updateRealTimeData();
+    }
 }
 
    async fetchMarketData() {
@@ -190,11 +197,18 @@ async fetchTechnicalData(marketData) {
     ];
 }
 updateRealTimeData() {
-    if (this.opportunities.length > 0) {
-        // يمكن تحسين هذا لترتيب الفرص بناءً على التغييرات الجديدة
-        this.updateUI();
-    }
+    // تجنب التحديث المتكرر
+    if (this.isUpdating) return;
+    this.isUpdating = true;
+    
+    setTimeout(() => {
+        if (this.opportunities.length > 0) {
+            this.updateUI();
+        }
+        this.isUpdating = false;
+    }, 1000); // تحديث كل ثانية فقط
 }
+
   async getMarketData(symbols) {
     const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
     const data = await response.json();
@@ -333,7 +347,7 @@ startAutoUpdate() {
     
     this.updateInterval = setInterval(() => {
         this.fetchMarketData();
-    }, 30000);
+    }, 60000);
 }
 
     performTechnicalAnalysis(data, analysisType, riskLevel) {
