@@ -103,27 +103,28 @@ class CryptoTradingBot {
 async getMarketData() {
     const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
     const data = await response.json();
-
-    // فلترة أزواج USDT وترتيب حسب السيولة/الحجم
-    return data
-      .filter(coin => coin.symbol.endsWith('USDT') && /^[A-Z]+USDT$/.test(coin.symbol))
-      .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-      .slice(0, 15) // أو أي عدد تريد عرضه
-      .map(coin => ({
-          symbol: coin.symbol,
-          price: parseFloat(coin.lastPrice),
-          change24h: parseFloat(coin.priceChangePercent),
-          volume: parseFloat(coin.volume),
-          high24h: parseFloat(coin.highPrice),
-          low24h: parseFloat(coin.lowPrice),
-          // المؤشرات التالية عشوائية (لو تريدها واقعية تحتاج تحليل آخر)
-          rsi: Math.random() * 100,
-          macd: (Math.random() - 0.5) * 2,
-          bb_position: Math.random(),
-          volume_ratio: Math.random() * 3 + 0.5,
-          support: parseFloat(coin.lastPrice) * 0.95,
-          resistance: parseFloat(coin.lastPrice) * 1.05
-      }));
+  // أضف هذا السطر:
+    this.cryptoData = data
+        .filter(coin => coin.symbol.endsWith('USDT') && /^[A-Z]+USDT$/.test(coin.symbol))
+        .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+        .slice(0, 15)
+        .map(coin => ({
+            symbol: coin.symbol,
+            price: parseFloat(coin.lastPrice),
+            change24h: parseFloat(coin.priceChangePercent),
+            volume: parseFloat(coin.volume),
+            high24h: parseFloat(coin.highPrice),
+            low24h: parseFloat(coin.lowPrice),
+            rsi: Math.random() * 100,
+            macd: (Math.random() - 0.5) * 2,
+            bb_position: Math.random(),
+            volume_ratio: Math.random() * 3 + 0.5,
+            support: parseFloat(coin.lastPrice) * 0.95,
+            resistance: parseFloat(coin.lastPrice) * 1.05
+        }));
+    
+    // احذف return واستبدله بـ:
+    console.log(`✅ تم جلب ${this.cryptoData.length} عملة من Binance`);
 }
    
     async analyzeOpportunities(marketData) {
@@ -940,6 +941,9 @@ class RealTimeCryptoBot extends CryptoTradingBot {
     }
 
     async start() {
+         await this.getMarketData(); // ← await مهم
+    this.analyzeOpportunities();
+    this.displayOpportunities();
     try {
         const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
         const data = await response.json();
