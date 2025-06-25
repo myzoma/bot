@@ -43,7 +43,63 @@ class CryptoTradingBot {
             this.refreshData();
         });
     }
+     // ← أضف الـ methods الجديدة هنا (قبل القوس الأخير للكلاس)
     
+    saveSettings() {
+        console.log('💾 تم حفظ الإعدادات');
+        localStorage.setItem('cryptoBotSettings', JSON.stringify({
+            lastUpdate: new Date().toISOString(),
+            opportunitiesCount: this.opportunities.length
+        }));
+    }
+
+    refreshData() {
+        console.log('🔄 تحديث البيانات...');
+        this.getMarketData();
+        console.log('✅ تم تحديث البيانات');
+    }
+
+    exportOpportunities() {
+        console.log('📤 تصدير الفرص...');
+        const data = JSON.stringify(this.opportunities, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'crypto-opportunities.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        console.log('✅ تم تصدير الفرص');
+    }
+
+    loadSettings() {
+        const saved = localStorage.getItem('cryptoBotSettings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            console.log('📂 تم تحميل الإعدادات المحفوظة');
+            return settings;
+        }
+        return null;
+    }
+
+    stop() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+        }
+        this.isConnected = false;
+        console.log('⏹️ تم إيقاف البوت');
+    }
+
+    getStatus() {
+        return {
+            isConnected: this.isConnected,
+            opportunitiesCount: this.opportunities.length,
+            lastUpdate: this.lastUpdate,
+            currentFilter: this.currentFilter
+        };
+    }
+
+} // ← هذا القوس الأخير للكلاس
 async getMarketData() {
     const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
     const data = await response.json();
