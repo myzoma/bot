@@ -930,6 +930,7 @@ class CryptoTradingBot {
 }
 // أضف هذا قبل السطر الأخير في script.js
 
+// استبدل class RealTimeCryptoBot بهذا:
 class RealTimeCryptoBot extends CryptoTradingBot {
     constructor() {
         super();
@@ -937,27 +938,84 @@ class RealTimeCryptoBot extends CryptoTradingBot {
     }
 
     async start() {
-        console.log('🚀 بدء البوت مع البيانات المباشرة...');
+        console.log('🚀 بدء البوت مع الفلترة الذكية...');
         
         try {
-            // جلب أسعار حقيقية
-            const response = await fetch('https://api1.binance.com/api/v3/ticker/24hr');
-            const data = await response.json();
+            // جلب جميع العملات من Binance
+            const response = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+            const allCoins = await response.json();
             
-            // أخذ أول 15 عملة
-            this.cryptoData = data.slice(0, 15).map(coin => ({
-                symbol: coin.symbol,
-                price: parseFloat(coin.lastPrice),
-                change24h: parseFloat(coin.priceChangePercent),
-                volume: parseFloat(coin.volume),
-                rsi: Math.random() * 100,
-                macd: (Math.random() - 0.5) * 2,
-                volume_ratio: Math.random() * 3,
-                support: parseFloat(coin.lastPrice) * 0.95,
-                resistance: parseFloat(coin.lastPrice) * 1.05
-            }));
+            console.log(`📊 تم جلب ${allCoins.length} عملة من Binance`);
             
-            console.log('✅ تم تحميل أسعار حقيقية من Binance');
+            // الفلترة الذكية التلقائية
+            const filteredCoins = allCoins.filter(coin => {
+                const price = parseFloat(coin.lastPrice);
+                const volume = parseFloat(coin.quoteVolume);
+                const change = parseFloat(coin.priceChangePercent);
+                
+                return (
+                    // عملات USDT فقط (الأكثر سيولة)
+                    coin.symbol.endsWith('USDT') &&
+                    
+                    // حجم تداول عالي (أكثر من 10 مليون)
+                    volume > 10000000 &&
+                    
+                    // السعر أكبر من $0.01 (تجنب العملات الرخيصة جداً)
+                    price > 0.01 &&
+                    
+                    // السعر أقل من $100,000 (تجنب العملات المكلفة جداً)
+                    price < 100000 &&
+                    
+                    // تغيير أقل من 50% (تجنب التلاعب)
+                    Math.abs(change) < 50 &&
+                    
+                    // تجنب العملات المستقرة
+                    !['USDCUSDT', 'BUSDUSDT', 'TUSDUSDT', 'DAIUSDT'].includes(coin.symbol)
+                );
+            })
+            
+            // ترتيب حسب حجم التداول (الأعلى أولاً)
+            .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+            
+            // أخذ أفضل 20 عملة
+            .slice(0, 20);
+            
+            console.log('🎯 العملات المختارة تلقائياً:');
+            
+            this.cryptoData = filteredCoins.map(coin => {
+                const price = parseFloat(coin.lastPrice);
+                const change = parseFloat(coin.priceChangePercent);
+                const volume = parseFloat(coin.quoteVolume);
+                
+                console.log(`${coin.symbol}: $${price.toFixed(4)} (${change > 0 ? '+' : ''}${change.toFixed(2)}%) - حجم: $${(volume/1000000).toFixed(1)}M`);
+                
+                return {
+                    symbol: coin.symbol,
+                    price: price,
+                    change24h: change,
+                    volume: parseFloat(coin.volume),
+                    high24h: parseFloat(coin.highPrice),
+                    low24h: parseFloat(coin.lowPrice),
+                    volumeUSD: volume,
+                    rsi: Math.random() * 100,
+                    macd: (Math.random() - 0.5) * 2,
+                    volume_ratio: Math.random() * 3,
+                    support: price * (0.95 + Math.random() * 0.02),
+                    resistance: price * (1.03 + Math.random() * 0.04),
+                    lastUpdate: new Date().toLocaleTimeString('ar-SA'),
+                    
+                    // معايير الجودة
+                    liquidityScore: Math.min(volume / 50000000, 10), // نقاط السيولة
+                    volatilityScore: Math.abs(change) / 10, // نقاط التقلب
+                    qualityScore: (volume / 10000000) + (10 - Math.abs(change)) // نقاط الجودة الإجمالية
+                };
+            });
+            
+            console.log(`✅ تم اختيار ${this.cryptoData.length} عملة بناءً على:`);
+            console.log('- حجم التداول العالي');
+            console.log('- السيولة الجيدة');
+            console.log('- الاستقرار النسبي');
+            console.log('- تجنب العملات المستقرة');
             
         } catch (error) {
             console.log('⚠️ خطأ في البيانات المباشرة - استخدام البيانات المحاكاة');
@@ -965,8 +1023,34 @@ class RealTimeCryptoBot extends CryptoTradingBot {
         }
         
         super.start();
+        
+        // تحديث تلقائي كل 5 دقائق
+        setTimeout(() => {
+            console.log('🔄 إعادة فلترة العملات...');
+            this.start();
+        }, 300000);
+    }
+    
+    // إضافة معلومات الفلترة للواجهة
+    displayFilterInfo() {
+        const filterInfo = document.createElement('div');
+        filterInfo.className = 'filter-info';
+        filterInfo.innerHTML = `
+            <h3>🤖 معايير الاختيار التلقائي:</h3>
+            <ul>
+                <li>✅ عملات USDT فقط</li>
+                <li>📊 حجم تداول > $10M</li>
+                <li>💰 سعر بين $0.01 - $100K</li>
+                <li>📈 تقلبات < 50%</li>
+                <li>🚫 تجنب العملات المستقرة</li>
+                <li>🏆 ترتيب حسب السيولة</li>
+            </ul>
+        `;
+        
+        document.querySelector('.opportunities-section').prepend(filterInfo);
     }
 }
+
 
 // تشغيل البوت عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', () => {
