@@ -18,33 +18,28 @@ class CryptoTradingBot {
 
     setupEventListeners() {
         // Refresh button
-        document.getElementById('refreshBtn').addEventListener('click', () => {
-            this.refreshData();
-        });
+         document.getElementById('refreshBtn').addEventListener('click', () => {
+        this.refreshData();
+    });
 
-        // Filter tabs
-        document.querySelectorAll('.filter-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                this.setActiveFilter(e.target.dataset.filter);
-            });
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            this.setActiveFilter(e.target.dataset.filter);
         });
+    });
 
-        // Analysis type change
-        document.getElementById('analysisType').addEventListener('change', () => {
-            this.refreshData();
-        });
+    document.getElementById('analysisType').addEventListener('change', () => {
+        this.refreshData();
+    });
 
-        // Risk level change
-        document.getElementById('riskLevel').addEventListener('change', () => {
-            this.refreshData();
-        });
+    document.getElementById('riskLevel').addEventListener('change', () => {
+        this.refreshData();
+    });
 
-        // Min volume change
-        document.getElementById('minVolume').addEventListener('change', () => {
-            this.refreshData();
-        });
-    }
-
+    document.getElementById('minVolume').addEventListener('change', () => {
+        this.refreshData();
+    });
+}
   async connectToAPI() {
     try {
         this.showLoading(true);
@@ -79,7 +74,7 @@ async connectToBinance() {
         throw error;
     }
 }
-    setupBinanceWebSocket() {
+  setupBinanceWebSocket() {
     const symbols = this.getBinanceSymbols();
     const streams = symbols.map(symbol => `${symbol.toLowerCase()}@ticker`).join('/');
     
@@ -102,9 +97,10 @@ async connectToBinance() {
 
     this.binanceWs.onclose = () => {
         console.log('تم إغلاق اتصال Binance WebSocket');
-        setTimeout(() => this.setupBinanceWebSocket(), 5000); // إعادة الاتصال بعد 5 ثواني
+        setTimeout(() => this.setupBinanceWebSocket(), 5000);
     };
 }
+
    processBinanceData(data) {
     const marketData = {
         symbol: data.s,
@@ -254,55 +250,47 @@ updateRealTimeData() {
 
     return opportunities.slice(0, 30);
 }
-    delay(ms) {
+   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
     performTechnicalAnalysis(data, analysisType, riskLevel) {
-        const signals = [];
-        let signalType = 'hold';
-        let probability = 50;
-        let expectedReturn = 0;
+    const signals = [];
+    let signalType = 'hold';
+    let probability = 50;
+    let expectedReturn = 0;
 
-       calculateRSI(prices, period = 14) {
-    const gains = [], losses = [];
-    for (let i = 1; i < prices.length; i++) {
-        const change = prices[i] - prices[i-1];
-        gains.push(change > 0 ? change : 0);
-        losses.push(change < 0 ? Math.abs(change) : 0);
+    // إصلاح الشروط
+    if (data.rsi < 30) {
+        signals.push('RSI oversold');
+        signalType = 'buy';
+        probability += 15;
+    } else if (data.rsi > 70) {
+        signals.push('RSI overbought');
+        signalType = 'sell';
+        probability += 15;
     }
-    const avgGain = gains.slice(-period).reduce((a,b) => a+b) / period;
-    const avgLoss = losses.slice(-period).reduce((a,b) => a+b) / period;
-    return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
-}
 
-calculateMACD(prices) {
-    const ema12 = this.calculateEMA(prices, 12);
-    const ema26 = this.calculateEMA(prices, 26);
-    return { macd: ema12 - ema26 };
-}
-
-calculateEMA(prices, period) {
-    const multiplier = 2 / (period + 1);
-    let ema = prices[0];
-    for (let i = 1; i < prices.length; i++) {
-        ema = (prices[i] * multiplier) + (ema * (1 - multiplier));
+    if (data.macd > 0) {
+        signals.push('MACD bullish');
+        if (signalType === 'buy') probability += 10;
+    } else {
+        signals.push('MACD bearish');
+        if (signalType === 'sell') probability += 10;
     }
-    return ema;
-}
 
-calculateBollingerPosition(prices, period = 20) {
-    const sma = prices.slice(-period).reduce((a,b) => a+b) / period;
-    const variance = prices.slice(-period).reduce((sum, price) => sum + Math.pow(price - sma, 2), 0) / period;
-    const stdDev = Math.sqrt(variance);
-    const currentPrice = prices[prices.length - 1];
-    return (currentPrice - (sma - 2 * stdDev)) / (4 * stdDev);
-}
+    if (data.bb_position < 0.2) {
+        signals.push('BB lower band');
+        if (signalType === 'buy') probability += 10;
+    } else if (data.bb_position > 0.8) {
+        signals.push('BB upper band');
+        if (signalType === 'sell') probability += 10;
+    }
 
-calculateVolumeRatio(volumes) {
-    const avgVolume = volumes.slice(-20).reduce((a,b) => a+b) / 20;
-    return volumes[volumes.length - 1] / avgVolume;
-}
-
+    if (data.volume_ratio > 2) {
+        signals.push('High volume');
+        probability += 10;
+    }
 
         // حساب الأهداف والمخاطر
         const targets = this.calculateTargets(data, signalType, analysisType);
@@ -409,17 +397,17 @@ calculateVolumeRatio(volumes) {
         document.getElementById('avgPotential').textContent = avgPotential.toFixed(1) + '%';
     }
 
-    renderOpportunities() {
-        const grid = document.getElementById('opportunitiesGrid');
-        const filteredOpportunities = this.filterOpportunities();
+   renderOpportunities() {
+    const grid = document.getElementById('opportunitiesGrid');
+    const filteredOpportunities = this.filterOpportunities();
+    grid.innerHTML = '';
+    
+    filteredOpportunities.forEach((opportunity, index) => {
+        const card = this.createOpportunityCard(opportunity, index);
+        grid.appendChild(card);
+    });
+}
 
-        grid.innerHTML = '';
-
-        filteredOpportunities.forEach((opportunity, index) => {
-            const card = this.createOpportunityCard(opportunity, index);
-            grid.appendChild(card);
-        });
-    }
 
     filterOpportunities() {
         switch (this.currentFilter) {
