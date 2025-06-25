@@ -779,7 +779,7 @@ class CryptoTradingBot {
             if (this.isConnected) {
                 this.refreshData();
             }
-        }, 30000);
+        }, 90000);
     }
 
     stopAutoUpdate() {
