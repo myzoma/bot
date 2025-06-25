@@ -657,17 +657,27 @@ startAutoUpdate() {
         }
     }
 
-    updateLastUpdateTime() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('ar-SA', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        
-        document.getElementById('lastUpdate').textContent = timeString;
-        this.lastUpdate = now;
+   updateLastUpdateTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('ar-SA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    const lastUpdateElement = document.getElementById('lastUpdate');
+    if (lastUpdateElement) {
+        lastUpdateElement.textContent = timeString;
     }
+    this.lastUpdate = now;
+}
+
+showLoading(show) {
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = show ? 'flex' : 'none';
+    }
+}
+
 
    async fetchMarketData() {
     if (this.isLoading) return; // منع التحديث المتعدد
