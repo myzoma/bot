@@ -55,7 +55,7 @@ class BinanceTradingBot {
 
     async loadSymbols() {
         try {
-            const response = await fetch('https://api.binance.com/api/v3/exchangeInfo');
+            const response = await fetch('https://api1.binance.com/api/v3/exchangeInfo');
             const data = await response.json();
             
             // فلترة الرموز النشطة فقط مع USDT
@@ -140,7 +140,7 @@ class BinanceTradingBot {
     async getKlineData(symbol, interval, limit = 100) {
         try {
             const response = await fetch(
-                `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+                `https://api1.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
             );
             const data = await response.json();
             
